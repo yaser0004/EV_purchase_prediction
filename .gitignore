@@ -1,0 +1,18 @@
+# Data (never commit competition data)
+data/raw/
+data/processed/
+outputs/
+submissions/
+*.csv
+*.parquet
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Kaggle secrets (never commit)
+kaggle.json
+.env
