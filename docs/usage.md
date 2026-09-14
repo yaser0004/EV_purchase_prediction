@@ -52,6 +52,11 @@ python -m src.train_gbdt --model xgb --train data/raw/train.csv --test data/raw/
   --seed 42 --device gpu --params-json outputs/best_xgb.json \
   --prior-train outputs/oof_recipe_seed42.npy --prior-test outputs/test_recipe_seed42.npy --out-suffix _h
 # clue (prior as feature only): add --prior-feature --no-prior-margin
+# v2 prior (Env-as-cat + multiplier crosses, OOF 0.93865): `python -m src.recipe_v2 --seed 42`
+# augments any stack pool as a 15th member, but S7 tied S3 (NNLS weight 0.0) — held.
+# cell-smooth prior (J1, OOF 0.93803 — dominated by v2, held): `python -m src.cell_prior --seed 42`
+# ingredient-only MLP prior (I, GPU, OOF 0.93854; S8 tied S3, held):
+#   `python -m src.mlp_prior --seed 42 --max-epochs 60 --patience 8`
 ```
 
 ## MLP diversity model

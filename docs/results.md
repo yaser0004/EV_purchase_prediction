@@ -38,3 +38,37 @@ Robustness: S3 rerun under meta-seed 7 → 0.94208.
 
 Standing best: `sub_stack_s3.csv`, LB **0.94188**. Open gap to the top of
 the board (~0.9467) needs the true data-generating recipe or equivalent.
+
+## H. Recipe v2 (generator recovery) — 2026-09-14, HELD
+
+- Diagnosis: target is near-rule-based — `Subsidy=No` rate 0.006 vs
+  `Yes` 0.275; `High` anxiety vetoed (0/2069 except 3/125 at Env5+Yes);
+  Env logits -4.6/-3.3/-1.5/-0.4/+0.8 (unequal steps); income 0.41→0.89
+  across deciles inside the top cell. v1 failed (0.93809) by coding Env
+  numeric-linear with no multiplier crosses.
+- H2 search (cross-fitted LogReg, seed 42): Env-as-cat 0.93842,
+  +log/income²/commute² 0.93863, +IncQ×Env + Sub×Anx 0.93866, +Sub×Env
+  0.93865 (flat in C). Smooth log-income slopes worse (0.93858);
+  big-cell TE single worse (0.93640 — binning loses the smooth income
+  gradient). Family caps ~0.9387.
+- `src/recipe_v2.py` (NEW, defaults preserve v1): R4 ingredient set,
+  joint target-free transforms, `oof/test_recipe_v2_seed42.npy`, OOF
+  **0.93865** (+0.00056 over v1) but corr 0.9975 vs v1, 0.985 vs S3.
+- S7 (S3 pool + v2): ridge_a10 0.94208 vs S3 0.94207 (+0.00001);
+  meta-seed 7 rerun 0.94208 = S3-under-7 0.94208 (exact tie); NNLS
+  weight 0.0 both seeds. Strict gate: HOLD `sub_stack_s7.csv`.
+  Best stays S3.
+
+## I/J. Cell-smooth + ingredient-MLP priors — 2026-09-14, HELD
+
+- J1 `src/cell_prior.py` (NEW): per Subsidy×Anxiety×Env cell logistic
+  on log_income + commute (30 cells, 15 fall back to smoothed rate —
+  veto cells are near-all-negative). OOF 0.93803 < v2; corr 0.998 vs
+  v2 (same family, weaker). J2/J3 skipped — no partial signal.
+- I `src/mlp_prior.py` (NEW): 13 raw ingredients only, 64-32 net,
+  GPU. OOF 0.93854 < v2; corr 0.94 vs S3 (diverse) but 0.998 vs the
+  full 86-col MLP (same model, cleaner inputs).
+- S8 (S3 pool + ingredient-MLP): ridge_a10 0.94207 = S3 exact tie,
+  NNLS weight 0.0. HOLD `sub_stack_s8.csv`.
+- Stop rule met: convex-LR, smooth-LR, cell-smooth, MLP families all
+  cap ~0.9386 with zero stack residual. S3 locked as final.
