@@ -72,3 +72,49 @@ the board (~0.9467) needs the true data-generating recipe or equivalent.
   NNLS weight 0.0. HOLD `sub_stack_s8.csv`.
 - Stop rule met: convex-LR, smooth-LR, cell-smooth, MLP families all
   cap ~0.9386 with zero stack residual. S3 locked as final.
+
+## K. LGBM/CatBoost tuning — 2026-09-15, HELD
+
+- Optuna single-fold proxy (`src/tune_lgbm.py`, `src/tune_cat.py`;
+  mirrors `tune_xgb.py`): `outputs/best_lgbm.json`, `outputs/best_cat.json`.
+- `lgbm_tuned42` (CPU) 0.94148 (+0.00009 over baseline — noise);
+  `cat_tuned42` (GPU, Logloss proxy) 0.94101 (-0.00068 — handicap).
+- S9 (S3 pool + both): ridge_a10 0.94207 = S3 tie both meta-seeds
+  (seed-7: 0.94207 vs S3 0.94208); NNLS zeroes the new members.
+  HOLD `sub_stack_s9.csv`. Only XGB had tuning headroom.
+
+## K2. AUC-on-GPU correction — 2026-09-15, HELD
+
+- CatBoost 1.2.10 supports AUC eval on GPU (CPU fallback, period 5);
+  Logloss proxy removed from `train_gbdt.py`. But the AUC-early-stopped
+  GPU rerun scores 0.94101 = proxy run exactly (corr 0.9999) — the
+  CPU-vs-GPU gap is in tree-building numerics, not the metric.
+- S10: ridge_a10 0.94206 < S3. HOLD `sub_stack_s10.csv`.
+
+## K3. GPU XGB seeds + 10-fold — 2026-09-15, HELD
+
+- Parity fails: GPU `xgb_tuned42` 0.94151 vs CPU 0.94176 (corr 0.9981).
+  GPU hist numerics diverge — speed lever only, not score.
+- GPU seeds 0/123/999: 0.94149/0.94147/0.94145; GPU 10-fold: 0.94158.
+- S11 (S3 + 5 GPU members): ridge ties S3 both meta-seeds
+  (0.94207 / 0.94208). HOLD `sub_stack_s11.csv`.
+
+## K4. CPU XGB seeds + 10-fold — 2026-09-15, GATE PASS (unsubmitted)
+
+- Correction: K3 "parity failure" was a feature-space confound
+  (`features.py` 62→86 cols landed after the S3-pool runs). True
+  same-seed CPU/GPU corr is 0.9993.
+- CPU seeds 0/123/999: 0.94149/0.94146/0.94146; CPU 10-fold: 0.94158.
+- S12 (S3 + 4 CPU members): ridge_a10 **0.94208** both meta-seeds
+  (+0.00001 strict on 42, tie on 7); NNLS ~0.055 on seed0 twice.
+  Submitted 2026-09-15 → LB **0.94187** (−0.00001 vs S3). Noise.
+  S3 stays best and final.
+
+## L. Recipe space — 2026-09-15, GATE PASS (submitted, LB pending)
+
+- Replicated `evgendvorkin/s6e9-single-xgb-cv-0-94583`: digit features
+  + all-column freq + triple TE + long-run XGB (`--features v2`,
+  `--te-triple`, `outputs/best_xgb_dv.json`). Legacy space untouched.
+- `xgb_dv` single (GPU, 5-fold): OOF **0.94564**.
+- S13 (S3 + dv): ridge_a10 **0.94567**/**0.94568** (seeds 42/7);
+  NNLS 0.92 on dv. `sub_stack_s13.csv` submitted 2026-09-15.

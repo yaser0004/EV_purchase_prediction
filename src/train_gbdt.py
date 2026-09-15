@@ -8,7 +8,7 @@ import pandas as pd
 from sklearn.metrics import roc_auc_score
 
 from .config import ID_COL, N_JOBS, N_SPLITS, OUTPUTS, TARGET
-from .features import build_features
+from .features import build_features, build_features_v2
 from .utils import make_folds, seed_all
 
 LGBM_PARAMS = dict(
@@ -70,6 +70,8 @@ def _fit_predict(model_name: str, X_tr, y_tr, X_va, y_va, cat_cols,
         import xgboost as xgb
 
         xgb_params = {**XGB_PARAMS, **overrides}
+        num_round = int(xgb_params.pop("num_boost_round", 3000))
+        es_rounds = int(xgb_params.pop("early_stopping_rounds", 200))
         if device == "gpu":
             xgb_params["device"] = "cuda"
         dtr = xgb.DMatrix(X_tr, label=y_tr, enable_categorical=True,
@@ -79,9 +81,9 @@ def _fit_predict(model_name: str, X_tr, y_tr, X_va, y_va, cat_cols,
         booster = xgb.train(
             xgb_params,
             dtr,
-            num_boost_round=3000,
+            num_boost_round=num_round,
             evals=[(dva, "valid")],
-            early_stopping_rounds=200,
+            early_stopping_rounds=es_rounds,
             verbose_eval=False,
         )
         return (
@@ -94,8 +96,10 @@ def _fit_predict(model_name: str, X_tr, y_tr, X_va, y_va, cat_cols,
 
         cat_params = {**CAT_PARAMS, **overrides}
         if device == "gpu":
-            # AUC eval is not implemented for GPU; Logloss is the proxy.
-            cat_params.update(task_type="GPU", devices="0", eval_metric="Logloss")
+            # AUC is computed on CPU behind the scenes (metric period 5)
+            # but early stopping still keys off it — no Logloss proxy needed
+            # (verified on catboost 1.2.10).
+            cat_params.update(task_type="GPU", devices="0")
         clf = CatBoostClassifier(**cat_params, iterations=3000,
                                  early_stopping_rounds=200)
         clf.fit(Pool(X_tr, y_tr, cat_features=cat_cols),
@@ -123,7 +127,8 @@ def run_cv(model_name: str, train_path: Path, seed: int = 42,
            device: str = "cpu", use_te: bool = False,
            overrides: dict | None = None, out_suffix: str = "",
            prior_train: Path | None = None, prior_test: Path | None = None,
-           prior_as_feature: bool = False, use_prior_margin: bool = True):
+           prior_as_feature: bool = False, use_prior_margin: bool = True,
+           feature_set: str = "v1", te_triple: bool = False):
     from .utils import check_submission
     from .config import SUBMISSIONS
 
@@ -143,7 +148,8 @@ def run_cv(model_name: str, train_path: Path, seed: int = 42,
         frames.append(tdf)
     # Joint featurization: no target statistics used, so no leakage;
     # guarantees identical categories/bins across train and test.
-    X_all = build_features(pd.concat(frames, ignore_index=True))
+    featurize = build_features_v2 if feature_set == "v2" else build_features
+    X_all = featurize(pd.concat(frames, ignore_index=True))
     feat_cols = [c for c in X_all.columns if c != ID_COL]
     for c in feat_cols:
         if not _t.is_numeric_dtype(X_all[c]) and str(X_all[c].dtype) != "category":
@@ -180,9 +186,14 @@ def run_cv(model_name: str, train_path: Path, seed: int = 42,
     oof = np.zeros(n_train)
     test_pred = np.zeros(len(X_test)) if X_test is not None else None
     tag = ""
+    if feature_set == "v2":
+        tag += "_dv"
     if use_te:
         from .features import target_encode_fold, te_columns
-        tag = "_te"
+        tag += "_te"
+    if te_triple:
+        assert not use_te, "--te and --te-triple are mutually exclusive"
+        tag += "_te3"
     if overrides:
         tag += "_tuned"
     if use_prior:
@@ -196,6 +207,14 @@ def run_cv(model_name: str, train_path: Path, seed: int = 42,
             te_list = [X_test] if X_test is not None else []
             X_tr, X_va, te_outs = target_encode_fold(
                 X_tr, y.iloc[tr], X_va, te_list, te_columns(X)
+            )
+            X_te_cur = te_outs[0] if te_outs else None
+        if te_triple:
+            from .features import TE_DVORKIN_COLS
+            te_list = [X_test] if X_test is not None else []
+            te_cols = [c for c in TE_DVORKIN_COLS if c in X_tr.columns]
+            X_tr, X_va, te_outs = target_encode_triple_fold(
+                X_tr, y.iloc[tr], X_va, te_list, te_cols, seed
             )
             X_te_cur = te_outs[0] if te_outs else None
         p_va, model, _ = _fit_predict(
@@ -239,6 +258,11 @@ if __name__ == "__main__":
     ap.add_argument("--device", choices=["cpu", "gpu"], default="cpu")
     ap.add_argument("--te", action="store_true",
                     help="add leak-free OOF target encodings + cross features")
+    ap.add_argument("--te-triple", action="store_true",
+                    help="leak-free triple target encoding (smooth auto/10/100)")
+    ap.add_argument("--features", choices=["v1", "v2"], default="v1",
+                    help="v1=legacy 86-col space, v2=recipe space "
+                    "(interactions+digits+all-freq)")
     ap.add_argument("--params-json", type=Path, default=None,
                     help="JSON file with param overrides for the model")
     ap.add_argument("--out-suffix", default="",
@@ -257,4 +281,4 @@ if __name__ == "__main__":
     run_cv(args.model, args.train, args.seed, args.folds, args.test,
            args.device, args.te, ov, args.out_suffix,
            args.prior_train, args.prior_test, args.prior_feature,
-           not args.no_prior_margin)
+           not args.no_prior_margin, args.features, args.te_triple)

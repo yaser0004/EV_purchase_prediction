@@ -59,6 +59,30 @@ python -m src.train_gbdt --model xgb --train data/raw/train.csv --test data/raw/
 #   `python -m src.mlp_prior --seed 42 --max-epochs 60 --patience 8`
 ```
 
+## Recipe space (v2) — digit/freq/triple-TE XGB
+
+Replicates the public single-XGB recipe: decimal-digit features (synthetic
+rounding tells) + joint frequency of every column + fold-local triple target
+encoding (sklearn, smooth auto/10/100) + long low-lr XGB run. The default
+`--features v1` preserves the legacy 86-col space (S3 pool); v2 is opt-in
+and never overwrites v1 files (tag `_dv...`).
+
+```bash
+python -m src.train_gbdt --model xgb --train data/raw/train.csv --test data/raw/test.csv \
+  --seed 42 --folds 5 --features v2 --te-triple \
+  --params-json outputs/best_xgb_dv.json --device gpu --out-suffix _dv5
+```
+
+`outputs/best_xgb_dv.json` is untracked (like `best_xgb.json`) — recreate
+as: max_depth 7, min_child_weight 10, subsample/colsample 0.9,
+reg_alpha 0.071, reg_lambda 2.0, learning_rate 0.005, max_bin 1024,
+num_boost_round 10000, early_stopping_rounds 500,
+deterministic_histogram true, random_state/seed 42.
+
+Notes: `--te-triple` also works on v1 (uses the 13 raw TE columns);
+10-fold v2 exceeds 7GB RAM (silent OOM after fold 1) — use 5-fold.
+Reference run: single OOF 0.94564; S13 stack 0.94567/0.94568.
+
 ## MLP diversity model
 
 ```bash
