@@ -251,13 +251,12 @@ one exception: the S3-era base members inside S13/S14 were trained on an
 earlier 62-feature revision of the v1 space that predates the first commit.
 The committed `build_features` (85 model features) reproduces the later
 tuning and seed experiments, not those original members. Their OOF/test
-arrays are therefore committed under `backup/s3_pool_62feat/` (28 files plus
-a SHA256 manifest); rebuild S14 from those plus the two recipe-space arrays.
-A from-scratch rerun without them yields an equivalent but not identical
-stack. CPU runs
-are reproducible in practice for a fixed seed and library version; GPU runs
-differ slightly from CPU and from each other because of kernel ordering and
-GPU tree-building numerics.
+arrays are therefore committed under `backup/s3_pool_62feat/` (28 `.npy`
+arrays plus `README.md` and `SHA256SUMS`); rebuild S14 from those plus the
+two recipe-space arrays. A from-scratch rerun without them yields an
+equivalent but not identical stack. CPU runs are reproducible in practice
+for a fixed seed and library version; GPU runs differ slightly from CPU and
+from each other because of kernel ordering and GPU tree-building numerics.
 
 ## 11. Extension points
 

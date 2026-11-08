@@ -5,7 +5,7 @@ This repository is a complete solution to the
 competition: predict whether a survey respondent will buy an electric
 vehicle (`Will_Buy_EV`, Yes/No) from 13 demographic, financial and
 attitudinal columns. The pipeline and the current feature spaces are
-fully reproducible, and the pre-commit S3 pool predictions needed to
+reproducible in practice, and the pre-commit S3 pool predictions needed to
 rebuild the exact final ensemble are preserved in `backup/`.
 
 The competition is scored by **ROC AUC**, which measures how well a model
