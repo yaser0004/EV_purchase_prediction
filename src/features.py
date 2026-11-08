@@ -14,7 +14,7 @@ def base_clean(df: pd.DataFrame) -> pd.DataFrame:
 
 def add_ev_features(df: pd.DataFrame) -> pd.DataFrame:
     """Additive only; every block checks column existence so pipeline
-    works before/after seeing the exact 31 competition columns."""
+    works before/after seeing the 13 competition feature columns."""
     df = df.copy()
 
     def has(*cols):
@@ -205,8 +205,10 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 
 # --- v2 recipe space: synthetic-artifact features (dvorkin-style) ---
 # Joint-frame, target-free throughout (digits + frequencies), so no leakage.
-# Kept separate from build_features so the legacy 86-col space (S3 pool)
-# stays reproducible. TE is fold-local (see target_encode_triple_fold).
+# Kept separate from build_features so the legacy space stays unchanged.
+# Note: build_features is now 85 features (86 columns with id); the S3-era
+# base OOFs predate that revision, so they are not rebuilt from this code.
+# TE is fold-local (see target_encode_triple_fold).
 
 DVORKIN_NUMS = [
     "Age",

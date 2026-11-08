@@ -8,7 +8,7 @@ All transforms are joint train+test and target-free (quantile edges,
 medians, one-hot alignment), so no leakage; y is touched only inside
 train folds. Test prior averages the 5 fold models.
 
-H2 search (seed 42, 5-fold pooled OOF): v1 0.93810 -> v2 0.93866.
+H2 search (seed 42, 5-fold pooled OOF): prior v1 0.93810 -> prior v2 0.93866.
 Usage: python -m src.recipe_v2 --seed 42 [--c 1.0]
 """
 import argparse

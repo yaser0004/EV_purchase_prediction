@@ -1,7 +1,7 @@
 """Ingredient-only smooth MLP prior (track I).
 
-Prior MLPs plateaued (0.93862 small, 0.93863 big) on the full 86-col
-feature set — but that is a different, noisier signal. This model sees
+Prior MLPs plateaued (0.93862 small, 0.93863 big) on the full 86-column
+joint feature frame, but that is a different, noisier signal. This model sees
 only the 13 raw ingredients (6 cats + Env-as-cat one-hots, 6 numerics +
 log_income), small net (64-32), heavy dropout/weight-decay: a smooth
 universal approximator of the generator surface, embedding-free.

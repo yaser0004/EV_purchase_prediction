@@ -15,9 +15,11 @@ python -m src.train_gbdt --model xgb  --train data/raw/train.csv --test data/raw
 python -m src.train_gbdt --model xgb  --train data/raw/train.csv --test data/raw/test.csv --seed 2026 --params-json outputs/best_xgb.json
 ```
 
-Notes: CatBoost on GPU uses a Logloss proxy (`train_gbdt.py`, GPU has no
-AUC metric); CPU CatBoost early-stops on AUC directly. Keep folds
-sequential on small machines.
+Notes: CatBoost 1.2.10 supports AUC early stopping on GPU (the metric is
+computed on CPU with a sampling period, but stopping still keys off it), so
+`--device gpu` no longer falls back to Logloss. GPU CatBoost still scores
+slightly lower than CPU on this data; prefer CPU when score matters. Keep
+folds sequential on small machines.
 
 ## Blending (exact-OOF verified)
 
@@ -43,6 +45,14 @@ used heterogeneous seeds, so their splits must not be reused), tunes
 `C`/`alpha` by pooled meta-OOF AUC, and averages the 5 fold-models for
 test. Submit only if meta-OOF strictly beats the running best.
 
+Nonlinear variant (experimental, held; same discipline):
+
+```bash
+python -m src.stack_nl --oofs <oof...> --tests <test...> \
+  --y data/raw/train.csv --test-ids data/raw/test.csv \
+  --out-name stack_nl --seed 42
+```
+
 ## Recipe prior + residual tracks
 
 ```bash
@@ -52,20 +62,20 @@ python -m src.train_gbdt --model xgb --train data/raw/train.csv --test data/raw/
   --seed 42 --device gpu --params-json outputs/best_xgb.json \
   --prior-train outputs/oof_recipe_seed42.npy --prior-test outputs/test_recipe_seed42.npy --out-suffix _h
 # clue (prior as feature only): add --prior-feature --no-prior-margin
-# v2 prior (Env-as-cat + multiplier crosses, OOF 0.93865): `python -m src.recipe_v2 --seed 42`
+# recipe prior v2 (Env-as-cat + multiplier crosses, OOF 0.93865): `python -m src.recipe_v2 --seed 42`
 # augments any stack pool as a 15th member, but S7 tied S3 (NNLS weight 0.0) — held.
-# cell-smooth prior (J1, OOF 0.93803 — dominated by v2, held): `python -m src.cell_prior --seed 42`
+# cell-smooth prior (J1, OOF 0.93803 — dominated by prior v2, held): `python -m src.cell_prior --seed 42`
 # ingredient-only MLP prior (I, GPU, OOF 0.93854; S8 tied S3, held):
 #   `python -m src.mlp_prior --seed 42 --max-epochs 60 --patience 8`
 ```
 
-## Recipe space (v2) — digit/freq/triple-TE XGB
+## Recipe feature space (`--features v2`) — digit/freq/triple-TE XGB
 
 Replicates the public single-XGB recipe: decimal-digit features (synthetic
 rounding tells) + joint frequency of every column + fold-local triple target
 encoding (sklearn, smooth auto/10/100) + long low-lr XGB run. The default
-`--features v1` preserves the legacy 86-col space (S3 pool); v2 is opt-in
-and never overwrites v1 files (tag `_dv...`).
+`--features v1` preserves the legacy 85-feature space; v2 is opt-in and
+never overwrites v1 files (tag `_dv...`).
 
 ```bash
 python -m src.train_gbdt --model xgb --train data/raw/train.csv --test data/raw/test.csv \
@@ -76,12 +86,15 @@ python -m src.train_gbdt --model xgb --train data/raw/train.csv --test data/raw/
 `outputs/best_xgb_dv.json` is untracked (like `best_xgb.json`) — recreate
 as: max_depth 7, min_child_weight 10, subsample/colsample 0.9,
 reg_alpha 0.071, reg_lambda 2.0, learning_rate 0.005, max_bin 1024,
-num_boost_round 10000, early_stopping_rounds 500,
-deterministic_histogram true, random_state/seed 42.
+num_boost_round 10000, early_stopping_rounds 500, random_state/seed 42.
+(The `deterministic_histogram` key in the saved file is inert under
+XGBoost 3.4.)
 
 Notes: `--te-triple` also works on v1 (uses the 13 raw TE columns);
 10-fold v2 exceeds 7GB RAM (silent OOM after fold 1) — use 5-fold.
-Reference run: single OOF 0.94564; S13 stack 0.94567/0.94568.
+Reference runs: single OOF 0.94564 (seed 42) and 0.94568 (seed 7);
+final stack S14 0.94587 outpaced both, scoring public 0.94599 and private
+0.94495.
 
 ## MLP diversity model
 
@@ -92,8 +105,10 @@ python -m src.mlp --train data/raw/train.csv --test data/raw/test.csv \
 
 Entity embeddings for the 21 categorical/binned columns, standardized
 numerics from train-fold stats only. Checked into the stack like any OOF.
+Requires the optional `requirements-mlp.txt`.
 
 ## Submission discipline
 
-Kaggle allows 10 submissions/day. House rule: at most 1–2 per idea, only
-past the strict OOF gate, best single file per round.
+Respect the competition's daily submission limit (10 per day for this
+one). House rule: at most 1-2 per idea, only past the strict OOF gate, best
+single file per round.
