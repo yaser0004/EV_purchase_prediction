@@ -1,0 +1,3 @@
+# Optional: needed only for the neural-network diversity track (src/mlp.py,
+# src/mlp_prior.py). The core pipeline and final ensemble do not require it.
+torch>=2.0

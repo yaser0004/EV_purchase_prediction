@@ -210,7 +210,7 @@ def run_cv(model_name: str, train_path: Path, seed: int = 42,
             )
             X_te_cur = te_outs[0] if te_outs else None
         if te_triple:
-            from .features import TE_DVORKIN_COLS
+            from .features import TE_DVORKIN_COLS, target_encode_triple_fold
             te_list = [X_test] if X_test is not None else []
             te_cols = [c for c in TE_DVORKIN_COLS if c in X_tr.columns]
             X_tr, X_va, te_outs = target_encode_triple_fold(
@@ -261,7 +261,7 @@ if __name__ == "__main__":
     ap.add_argument("--te-triple", action="store_true",
                     help="leak-free triple target encoding (smooth auto/10/100)")
     ap.add_argument("--features", choices=["v1", "v2"], default="v1",
-                    help="v1=legacy 86-col space, v2=recipe space "
+                    help="v1=legacy 85-feature space, v2=recipe space "
                     "(interactions+digits+all-freq)")
     ap.add_argument("--params-json", type=Path, default=None,
                     help="JSON file with param overrides for the model")
