@@ -76,8 +76,9 @@ This prevents a new run from overwriting an existing artifact.
 
 The current revision has 85 model features, or 86 columns including `id`.
 The S3-era base members were built from an earlier 62-feature revision that
-was never committed, so they cannot be regenerated from this code (see
-section 10). Do not modify this space in place.
+was never committed, so this code cannot regenerate them; their prediction
+arrays are preserved in `backup/s3_pool_62feat/` (see section 10). Do not
+modify this space in place.
 
 ### v2 (recipe feature space, 70 model features, 6 categorical)
 
@@ -249,9 +250,11 @@ Prediction arrays can be regenerated from the commands in `usage.md`, with
 one exception: the S3-era base members inside S13/S14 were trained on an
 earlier 62-feature revision of the v1 space that predates the first commit.
 The committed `build_features` (85 model features) reproduces the later
-tuning and seed experiments, not those original members. Rebuilding the
-exact final ensemble therefore requires the archived `outputs/*.npy` files;
-a from-scratch rerun yields an equivalent but not identical stack. CPU runs
+tuning and seed experiments, not those original members. Their OOF/test
+arrays are therefore committed under `backup/s3_pool_62feat/` (28 files plus
+a SHA256 manifest); rebuild S14 from those plus the two recipe-space arrays.
+A from-scratch rerun without them yields an equivalent but not identical
+stack. CPU runs
 are reproducible in practice for a fixed seed and library version; GPU runs
 differ slightly from CPU and from each other because of kernel ordering and
 GPU tree-building numerics.

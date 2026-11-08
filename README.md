@@ -5,9 +5,8 @@ This repository is a complete solution to the
 competition: predict whether a survey respondent will buy an electric
 vehicle (`Will_Buy_EV`, Yes/No) from 13 demographic, financial and
 attitudinal columns. The pipeline and the current feature spaces are
-fully reproducible; rebuilding the exact final ensemble also needs the
-archived base-model predictions described in the
-[technical reference](docs/technical.md).
+fully reproducible, and the pre-commit S3 pool predictions needed to
+rebuild the exact final ensemble are preserved in `backup/`.
 
 The competition is scored by **ROC AUC**, which measures how well a model
 ranks buyers above non-buyers rather than how accurate any single yes/no
@@ -95,6 +94,7 @@ source/                 project root (the Git repository)
 │   ├── cell_prior.py   cell-smoothed prior experiment
 │   ├── mlp*.py         neural-network diversity models
 │   └── tune_*.py       Optuna parameter search
+├── backup/             pre-commit 62-feature S3 pool predictions
 ├── requirements*.txt   core and optional (MLP) dependencies
 ├── docs/               technical reference, runbook, results ledger
 ├── data/raw/           competition CSVs (not versioned)

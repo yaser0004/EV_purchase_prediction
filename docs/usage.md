@@ -94,7 +94,8 @@ Notes: `--te-triple` also works on v1 (uses the 13 raw TE columns);
 10-fold v2 exceeds 7GB RAM (silent OOM after fold 1) — use 5-fold.
 Reference runs: single OOF 0.94564 (seed 42) and 0.94568 (seed 7);
 final stack S14 0.94587 outpaced both, scoring public 0.94599 and private
-0.94495.
+0.94495. The pre-commit S3 pool arrays needed for exact S14 reproduction
+are committed in `backup/s3_pool_62feat/`.
 
 ## MLP diversity model
 
